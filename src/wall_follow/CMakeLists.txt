@@ -19,7 +19,9 @@ foreach(PACKAGE
   geometry_msgs
   nav_msgs
   sensor_msgs
-  std_msgs)
+  std_msgs
+  deepracer_interfaces_pkg
+  )
 
   find_package(${PACKAGE} REQUIRED)
 
@@ -31,7 +33,7 @@ include_directories(include)
 # Create Cpp executable
 add_executable(wall_follow_node src/wall_follow_node.cpp)
 ament_target_dependencies(wall_follow_node 
-  rclcpp geometry_msgs nav_msgs sensor_msgs std_msgs
+  rclcpp geometry_msgs nav_msgs sensor_msgs std_msgs deepracer_interfaces_pkg
 )
 
 # Install Cpp executables

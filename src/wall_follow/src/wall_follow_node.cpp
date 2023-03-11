@@ -2,22 +2,24 @@
 #include <string>
 #include "sensor_msgs/msg/laser_scan.hpp"
 #include "nav_msgs/msg/odometry.hpp"
-#include "ackermann_msgs/msg/ackermann_drive_stamped.hpp"
+#include "deepracer_interfaces_pkg/msg/servo_ctrl_msg.hpp"
 
 #define _USE_MATH_DEFINES
 #include <cmath>
 
 using std::placeholders::_1;
 
-
 class WallFollow : public rclcpp::Node {
 
 public:
     WallFollow() : Node("wall_follow_node")
     {
+        RCLCPP_INFO(rclcpp::get_logger("logger"), "Starting wall follow node...\n");
         // Create ROS subscribers and publishers
-        publisher_ = this->create_publisher<ackermann_msgs::msg::AckermannDriveStamped>(this->drive_topic, 10);
+        publisher_ = this->create_publisher<deepracer_interfaces_pkg::msg::ServoCtrlMsg>(this->drive_topic, 10);
         subscription_ = this->create_subscription<sensor_msgs::msg::LaserScan>(this->lidarscan_topic, 10, std::bind(&WallFollow::scan_callback, this, _1));
+        RCLCPP_INFO(rclcpp::get_logger("logger"), "Publishing drive topic on " + drive_topic);
+        RCLCPP_INFO(rclcpp::get_logger("logger"), "Subscribing lidar topic on " + lidarscan_topic);
     }
 
 private:
@@ -32,15 +34,16 @@ private:
     double start_t = -1;
     double curr_t = 0.0;
     double prev_t = 0.0;
+    // Distance from the wall in meters
+    double desired_distance = 0.50;
     
     // Topics
-    std::string lidarscan_topic = "/scan";
-    std::string drive_topic = "/drive";
+    std::string lidarscan_topic = "/rplidar_ros/scan";
+    std::string drive_topic = "/ctrl_pkg/servo_msg";
 
     /// Create ROS subscribers and publishers
-    rclcpp::Publisher<ackermann_msgs::msg::AckermannDriveStamped>::SharedPtr publisher_;
+    rclcpp::Publisher<deepracer_interfaces_pkg::msg::ServoCtrlMsg>::SharedPtr publisher_;
     rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr subscription_;
-    
 
     double get_range(const sensor_msgs::msg::LaserScan::ConstSharedPtr scan_msg, double angle)
     {
@@ -83,8 +86,8 @@ private:
             error: calculated error
         */
 
-        double a = get_range(scan_msg, to_radians(-50.0));
-        double b = get_range(scan_msg, to_radians(-90.0)); // 0 degrees is in front of the card.
+        double a = get_range(scan_msg, to_radians(50.0));
+        double b = get_range(scan_msg, to_radians(90.0)); // 0 degrees is in front of the card.
         double theta = to_radians(40.0); // 90.0 - 50.0 = 40.0 degrees
         double alpha = std::atan((a * std::cos(theta) - b)/(a * std::sin(theta)));
         double D_t = b*std::cos(alpha);
@@ -117,18 +120,25 @@ private:
         if (this->prev_t == 0.0) return;
         angle = this->kp * this->error + this->ki * this->integral * (this->curr_t - this->start_t) + this->kd * (this->error - this->prev_error)/(this->curr_t - this->prev_t);
 
-        auto drive_msg = ackermann_msgs::msg::AckermannDriveStamped();
+        auto drive_msg = deepracer_interfaces_pkg::msg::ServoCtrlMsg();
         // Fill in drive message and publish
-        drive_msg.drive.steering_angle = angle;
+        drive_msg.angle = angle;
         
-        // We go slower if we need to a large steering angle correction
-        if (std::abs(drive_msg.drive.steering_angle) >= this->to_radians(0) && std::abs(drive_msg.drive.steering_angle) < this->to_radians(10)) {
-            drive_msg.drive.speed = 1.5;
-        } else if (std::abs(drive_msg.drive.steering_angle) >= this->to_radians(10) && std::abs(drive_msg.drive.steering_angle) < this->to_radians(20)) {
-            drive_msg.drive.speed = 1.0;
-        } else {
-            drive_msg.drive.speed = 0.5;
-        }
+        // // TODO: Deepracer messages use steering ratio, not absolute desired angle (https://github.com/aws-deepracer/aws-deepracer-interfaces-pkg/blob/main/deepracer_interfaces_pkg/msg/ServoCtrlMsg.msg)
+        // // Check if this logic is still OK or if we need to adjust
+
+        // // We go slower if we need to a large steering angle correction
+        // if (std::abs(drive_msg.angle) >= this->to_radians(0) && std::abs(drive_msg.angle) < this->to_radians(10)) {
+        //     drive_msg.throttle = 1.5;
+        // } else if (std::abs(drive_msg.angle) >= this->to_radians(10) && std::abs(drive_msg.angle) < this->to_radians(20)) {
+        //     drive_msg.throttle = 1.0;
+        // } else {
+        //     drive_msg.throttle = 0.5;
+        // }
+
+        drive_msg.throttle = 0.5;
+        
+        RCLCPP_INFO(rclcpp::get_logger("logger"), "Angle " + std::to_string(angle) + " Throttle " + std::to_string(drive_msg.throttle) );
         this->publisher_->publish(drive_msg);
     }
 
@@ -143,7 +153,7 @@ private:
         Returns:
             None
         */
-        get_error(scan_msg, 1); 
+        get_error(scan_msg, desired_distance); 
         pid_control();
 
     }
