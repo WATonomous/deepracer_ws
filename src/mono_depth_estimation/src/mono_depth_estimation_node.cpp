@@ -72,7 +72,12 @@ public:
         RCLCPP_INFO_STREAM(rclcpp::get_logger("rclcpp"), "loading model " << model_path << "...");
 
         // Read in the neural network from the files
-        net = cv::dnn::readNet(model_path, model_config_path);
+        // config is optional for onnx, required for OpenVINO
+        if (model_config_path != "") {
+            net = cv::dnn::readNet(model_path, model_config_path);
+        } else {
+            net = cv::dnn::readNet(model_path);
+        }
 
         if (net.empty())
         {
@@ -85,6 +90,8 @@ public:
 private:
     sensor_msgs::msg::Image::SharedPtr get_depth_map(const deepracer_interfaces_pkg::msg::CameraMsg::ConstSharedPtr& msg) {
  
+        auto start = cv::getTickCount();
+
         // Load in an image
         cv::Mat image;
         cv_bridge::CvImagePtr imgPtr;
@@ -99,6 +106,7 @@ private:
             RCLCPP_ERROR_STREAM(rclcpp::get_logger("rclcpp"), "cv_bridge exception: " << e.what());
             return nullptr;
         }
+
 
         // Create Blob from Input Image
         // MiDaS v2.1 Large ( Scale : 1 / 255, Size : 384 x 384, Mean Subtraction : ( 123.675, 116.28, 103.53 ), Channels Order : RGB )
@@ -127,6 +135,12 @@ private:
         // Scale between 0 and 255
         output.convertTo(output, CV_8U, 255.0);
 
+        auto end = cv::getTickCount();
+        auto totalTime = (end - start) / cv::getTickFrequency();
+        auto fps = 1 / totalTime;
+        RCLCPP_INFO_STREAM(rclcpp::get_logger("rclcpp"), "Processed image in " << totalTime << " seconds, " << fps << " fps");
+
+
         // Convert cv image to ros2 message
         auto pub_msg = cv_bridge::CvImage(std_msgs::msg::Header(), "mono8", output)
             .toImageMsg();
@@ -139,7 +153,6 @@ private:
 
         std::vector<sensor_msgs::msg::Image> images = camera_msg->images;
 
-        RCLCPP_INFO_STREAM(rclcpp::get_logger("rclcpp"), "Received a camera msg");
 
         auto pub_msg = this->get_depth_map(camera_msg);
 
