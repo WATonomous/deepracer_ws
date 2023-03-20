@@ -22,17 +22,6 @@ struct Detection
     cv::Rect box;
 };
 
-// // read classes.txt into a vector of strings
-// void read_classes(std::string class_path, std::vector<std::string> &classes)
-// {
-//     std::ifstream file(class_path);
-//     std::string str;
-//     while (std::getline(file, str))
-//     {
-//         classes.push_back(str);
-//     }
-// }
-
 std::vector<std::string> read_classes(std::string class_path, std::vector<std::string> &classes)
 {
     std::ifstream ifs(class_path);
