@@ -52,3 +52,4 @@ CATKIN_IGNORE
 
 log/
 install/
+build/

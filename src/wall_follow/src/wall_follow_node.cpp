@@ -3,11 +3,14 @@
 #include "sensor_msgs/msg/laser_scan.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "deepracer_interfaces_pkg/msg/servo_ctrl_msg.hpp"
+#include <map>
+#include <vector>
 
 #define _USE_MATH_DEFINES
 #include <cmath>
 
 using std::placeholders::_1;
+using namespace std::literals;
 
 class WallFollow : public rclcpp::Node {
 
@@ -17,10 +20,26 @@ public:
         RCLCPP_INFO(rclcpp::get_logger("logger"), "Starting wall follow node...\n");
         // Create ROS subscribers and publishers
         publisher_ = this->create_publisher<deepracer_interfaces_pkg::msg::ServoCtrlMsg>(this->drive_topic, 10);
-        subscription_ = this->create_subscription<sensor_msgs::msg::LaserScan>(this->lidarscan_topic, 10, std::bind(&WallFollow::scan_callback, this, _1));
+        auto default_qos = rclcpp::QoS(rclcpp::SystemDefaultsQoS());
+        subscription_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
+            this->lidarscan_topic, default_qos,
+            std::bind(&WallFollow::scan_callback, this, _1));
+
+
         RCLCPP_INFO(rclcpp::get_logger("logger"), "Publishing drive topic on " + drive_topic);
         RCLCPP_INFO(rclcpp::get_logger("logger"), "Subscribing lidar topic on " + lidarscan_topic);
+
+        RCLCPP_INFO(rclcpp::get_logger("logger"), "Listing topics on the node");
+        std::map<std::string, std::vector<std::string>> mp = this->get_topic_names_and_types();
+        for (auto it = mp.begin(); it != mp.end(); it++) {
+            RCLCPP_INFO(rclcpp::get_logger("logger"), "Topic " + it->first);
+        }
+
+        RCLCPP_INFO(rclcpp::get_logger("logger"), "Creating wall timer");
+        timer_ptr_ = this->create_wall_timer(1000ms, std::bind(&WallFollow::timer_callback, this));
+
     }
+
 
 private:
     // PID CONTROL PARAMS
@@ -44,6 +63,13 @@ private:
     /// Create ROS subscribers and publishers
     rclcpp::Publisher<deepracer_interfaces_pkg::msg::ServoCtrlMsg>::SharedPtr publisher_;
     rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr subscription_;
+    rclcpp::TimerBase::SharedPtr timer_ptr_;
+
+    void timer_callback()
+    {
+        RCLCPP_INFO(rclcpp::get_logger("logger"), "Timer callback");
+    }
+
 
     double get_range(const sensor_msgs::msg::LaserScan::ConstSharedPtr scan_msg, double angle)
     {
@@ -144,6 +170,7 @@ private:
 
     void scan_callback(const sensor_msgs::msg::LaserScan::ConstSharedPtr scan_msg) 
     {
+        RCLCPP_INFO(rclcpp::get_logger("logger"), "Got message");
         /*
         Callback function for LaserScan messages. Calculate the error and publish the drive message in this function.
 
@@ -155,13 +182,14 @@ private:
         */
         get_error(scan_msg, desired_distance); 
         pid_control();
-
     }
 
 };
 int main(int argc, char ** argv) {
     rclcpp::init(argc, argv);
-    rclcpp::spin(std::make_shared<WallFollow>());
+    auto node = std::make_shared<WallFollow>();
+    rclcpp::spin(node);
+
     rclcpp::shutdown();
     return 0;
 }
