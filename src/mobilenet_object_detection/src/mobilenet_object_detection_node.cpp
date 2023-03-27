@@ -167,38 +167,11 @@ private:
             }
         }
 
-        // // Iterate through the detected objects
-        // for (size_t j = 0; j < outs.size(); j++)
-        // {
-        //     float *data = (float *)outs[j].data;
-        //     for (int i = 0; i < outs[j].total(); i += 7)
-        //     {
-        //         float confidence = data[i + 2];
-        //         if (confidence > 0.5)
-        //         {
-        //             int classId = static_cast<int>(data[i + 1]);
-
-        //             int xLeft = static_cast<int>(data[i + 3] * image.cols);
-        //             int yTop = static_cast<int>(data[i + 4] * image.rows);
-        //             int xRight = static_cast<int>(data[i + 5] * image.cols);
-        //             int yBottom = static_cast<int>(data[i + 6] * image.rows);
-        //             cv::Rect rect(xLeft, yTop, xRight - xLeft, yBottom - yTop);
-        //             detections.push_back(Detection{classId, confidence, rect});
-
-        //             // log class and confidence
-        //             RCLCPP_INFO_STREAM(rclcpp::get_logger("rclcpp"), "class id: " << classId << " class: "
-        //                                                                           << ", confidence: " << confidence);
-        //         }
-        //     }
-        // }
-
         // Compute fps
         auto end = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
         double fps = 1000.0 / duration.count();
         RCLCPP_INFO_STREAM(rclcpp::get_logger("rclcpp"), "inference fps: " << fps);
-
-        // compute rolling average of fps
     }
 
     void publish_detections(cv::Mat &src_image, const std::vector<Detection> &detections)
