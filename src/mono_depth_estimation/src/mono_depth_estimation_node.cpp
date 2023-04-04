@@ -83,6 +83,9 @@ public:
         {
             RCLCPP_ERROR_STREAM(rclcpp::get_logger("rclcpp"), "unable to read dnn net");
         }
+
+        // // required for onnx and opencv 4.7, or else inference will return error
+        net.enableWinograd(false);
         RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "successfully loaded model");
 
     }
@@ -110,9 +113,9 @@ private:
 
         // Create Blob from Input Image
         // MiDaS v2.1 Large ( Scale : 1 / 255, Size : 384 x 384, Mean Subtraction : ( 123.675, 116.28, 103.53 ), Channels Order : RGB )
-        cv::Mat blob = cv::dnn::blobFromImage(image, 1 / 255.f, cv::Size(384, 384), cv::Scalar(123.675, 116.28, 103.53), true, false);
+        // cv::Mat blob = cv::dnn::blobFromImage(image, 1 / 255.f, cv::Size(384, 384), cv::Scalar(123.675, 116.28, 103.53), true, false);
         // MiDaS v2.1 Small ( Scale : 1 / 255, Size : 256 x 256, Mean Subtraction : ( 123.675, 116.28, 103.53 ), Channels Order : RGB )
-        // cv::Mat blob = cv::dnn::blobFromImage(image, 1 / 255.f, cv::Size(256, 256), cv::Scalar(123.675, 116.28, 103.53), true, false);
+        cv::Mat blob = cv::dnn::blobFromImage(image, 1 / 255.f, cv::Size(256, 256), cv::Scalar(123.675, 116.28, 103.53), true, false);
 
         net.setInput(blob);
         // Forward pass of the blob through the neural network to get the predictions
@@ -140,6 +143,13 @@ private:
         auto fps = 1 / totalTime;
         RCLCPP_INFO_STREAM(rclcpp::get_logger("rclcpp"), "Processed image in " << totalTime << " seconds, " << fps << " fps");
 
+        // Draw fps onto the top left corner of the image as blue text
+        // Format fps to two decimal places
+        std::stringstream stream;
+        stream << std::fixed << std::setprecision(2) << fps;
+        std::string fps_str = "FPS: " + stream.str();
+
+        cv::putText(output, fps_str, cv::Point(10, 20), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 0, 0), 1, cv::LINE_AA);
 
         // Convert cv image to ros2 message
         auto pub_msg = cv_bridge::CvImage(std_msgs::msg::Header(), "mono8", output)
