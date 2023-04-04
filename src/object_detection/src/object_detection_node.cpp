@@ -59,6 +59,7 @@ class ObjectDetectionNode : public rclcpp::Node
     const float SCORE_THRESHOLD = 0.2;
     const float NMS_THRESHOLD = 0.4;
     const float CONFIDENCE_THRESHOLD = 0.4;
+    double fps = 0;
 
 public:
     ObjectDetectionNode() : Node("mono_depth_estimation_node")
@@ -105,7 +106,7 @@ public:
         }
 
         // // required for onnx and opencv 4.7, or else inference will return error
-        // net.enableWinograd(false);
+        net.enableWinograd(false);
 
         RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "successfully loaded model");
     }
@@ -193,7 +194,7 @@ private:
         // Compute fps
         auto end = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-        double fps = 1000.0 / duration.count();
+        fps = 1000.0 / duration.count();
         RCLCPP_INFO_STREAM(rclcpp::get_logger("rclcpp"), "inference fps: " << fps);
         
     }
@@ -207,7 +208,7 @@ private:
         for (size_t i = 0; i < detections.size(); i++)
         {
             // Draw box
-            cv::rectangle(image, detections[i].box, cv::Scalar(255, 0, 0), 2);
+            cv::rectangle(image, detections[i].box, cv::Scalar(255, 0, 0), 1);
 
             // Draw label
             std::stringstream ss;
@@ -215,18 +216,31 @@ private:
             std::string label = ss.str();   
 
             int baseline;
-            cv::Size label_size = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseline);
+            cv::Size label_size = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.4, 1, &baseline);
             cv::rectangle(image, cv::Point(detections[i].box.x, detections[i].box.y - label_size.height - baseline),
                           cv::Point(detections[i].box.x + label_size.width, detections[i].box.y), cv::Scalar(0, 255, 0), cv::FILLED);
             cv::putText(image, label, cv::Point(detections[i].box.x, detections[i].box.y - baseline),
-                        cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0), 1);
+                        cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(0, 0, 0), 1);
+            
 
             RCLCPP_INFO_STREAM(rclcpp::get_logger("rclcpp"), label << std::endl);
         }
 
+        // write fps to image
+        std::stringstream ss;
+        ss << "fps: " << std::fixed << std::setprecision(2) << fps;
+        std::string label = ss.str();
+        int baseline;
+        cv::Size label_size = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.4, 1, &baseline);
+        cv::putText(image, label, cv::Point(0, label_size.height),
+                    cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(0, 0, 0), 1);
+                
+
         // Convert cv image to ros image
         auto pub_msg = cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", image)
                            .toImageMsg();
+
+        
 
         // Publish image
         publisher->publish(*pub_msg.get());
