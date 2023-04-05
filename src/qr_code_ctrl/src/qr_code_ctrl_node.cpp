@@ -5,19 +5,23 @@
 class QRCodeCtrlNode : public rclcpp::Node
 {
 public:
+
+    std::string drive_topic = "/ctrl_pkg/servo_msg";
+    
     QRCodeCtrlNode() : Node("qr_code_ctrl_node")
     {   
         // Create default qos
         auto default_qos = rclcpp::QoS(rclcpp::SystemDefaultsQoS());
 
         qr_code_command_subscriber_ = this->create_subscription<qr_msgs::msg::QRCodeCommand>(
-            "qr_code_command", default_qos, std::bind(&QRCodeCtrlNode::qr_code_command_callback, this, std::placeholders::_1));
-        servo_ctrl_publisher_ = this->create_publisher<deepracer_interfaces_pkg::msg::ServoCtrlMsg>("servo_ctrl", 10);
+            "/qr_code_detector/qr_code_command", default_qos, std::bind(&QRCodeCtrlNode::qr_code_command_callback, this, std::placeholders::_1));
+        servo_ctrl_publisher_ = this->create_publisher<deepracer_interfaces_pkg::msg::ServoCtrlMsg>(drive_topic, 10);
     }
 
 private:
     void qr_code_command_callback(const qr_msgs::msg::QRCodeCommand::SharedPtr msg)
     {
+        RCLCPP_INFO(this->get_logger(), "Received QRCodeCommand: throttle=%f, turn_angle=%f", msg->throttle, msg->turn_angle);
         deepracer_interfaces_pkg::msg::ServoCtrlMsg servo_ctrl_msg;
 
         // Map QRCodeCommand values to ServoCtrlMsg
