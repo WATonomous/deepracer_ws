@@ -36,7 +36,7 @@ endif()
 
 
 # Create Cpp executable
-add_executable(qr_code_ctrl_node src/qr_code_ctrl_node.cpp)
+add_executable(qr_code_ctrl_node src/qr_code_ctrl_node.cpp src/action_space.cpp)
 ament_target_dependencies(qr_code_ctrl_node
   rclcpp sensor_msgs std_msgs qr_msgs deepracer_interfaces_pkg
 )
@@ -54,6 +54,5 @@ install(TARGETS
 # )
 
 target_link_libraries(qr_code_ctrl_node "${cpp_typesupport_target}") 
-
 
 ament_package()
