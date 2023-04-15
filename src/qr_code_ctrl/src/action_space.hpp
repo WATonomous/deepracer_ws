@@ -20,9 +20,11 @@ class Action {
         ActionName name;
         float angle;
         float throttle;
-        constexpr Action(ActionName name, float angle, float throttle) : name(name),  angle(angle), throttle(throttle) {}
-        static Action get_action(float dx_ratio, float dy_ratio, float area_ratio);
+        constexpr Action(ActionName name, float angle, float throttle, int timestamp) : name(name),  angle(angle), throttle(throttle), timestamp(timestamp) {}
+        static Action get_action_follow(float dx_ratio, float dy_ratio, float area_ratio);
+        static Action get_action_waypoint(std::string command, float dx_ratio, float dy_ratio, float area_ratio);
         static std::string get_action_name(ActionName name);
+        int timestamp;
 };
 
 class ActionAngle {
@@ -57,13 +59,13 @@ class ActionThrottle {
 
 class ActionVals {
     public:
-        static constexpr Action NO_ACTION = Action(ActionName::NO_ACTION, ActionAngle::NO_ACTION, ActionThrottle::NO_ACTION);
-        static constexpr Action STRAIGHT_FORWARD = Action(ActionName::STRAIGHT_FORWARD, ActionAngle::STRAIGHT_FORWARD, ActionThrottle::STRAIGHT_FORWARD);
-        static constexpr Action STRAIGHT_BACKWARD = Action(ActionName::STRAIGHT_BACKWARD, ActionAngle::STRAIGHT_BACKWARD, ActionThrottle::STRAIGHT_BACKWARD);
-        static constexpr Action SLOW_LEFT_FORWARD = Action(ActionName::SLOW_LEFT_FORWARD, ActionAngle::SLOW_LEFT_FORWARD, ActionThrottle::SLOW_LEFT_FORWARD);
-        static constexpr Action SLOW_RIGHT_FORWARD = Action(ActionName::SLOW_RIGHT_FORWARD, ActionAngle::SLOW_RIGHT_FORWARD, ActionThrottle::SLOW_RIGHT_FORWARD);
-        static constexpr Action SLOW_LEFT_BACKWARD = Action(ActionName::SLOW_LEFT_BACKWARD, ActionAngle::SLOW_LEFT_BACKWARD, ActionThrottle::SLOW_LEFT_BACKWARD);
-        static constexpr Action SLOW_RIGHT_BACKWARD = Action(ActionName::SLOW_RIGHT_BACKWARD, ActionAngle::SLOW_RIGHT_BACKWARD, ActionThrottle::SLOW_RIGHT_BACKWARD);
+        static constexpr Action NO_ACTION = Action(ActionName::NO_ACTION, ActionAngle::NO_ACTION, ActionThrottle::NO_ACTION, 0);
+        static constexpr Action STRAIGHT_FORWARD = Action(ActionName::STRAIGHT_FORWARD, ActionAngle::STRAIGHT_FORWARD, ActionThrottle::STRAIGHT_FORWARD, 0);
+        static constexpr Action STRAIGHT_BACKWARD = Action(ActionName::STRAIGHT_BACKWARD, ActionAngle::STRAIGHT_BACKWARD, ActionThrottle::STRAIGHT_BACKWARD, 0);
+        static constexpr Action SLOW_LEFT_FORWARD = Action(ActionName::SLOW_LEFT_FORWARD, ActionAngle::SLOW_LEFT_FORWARD, ActionThrottle::SLOW_LEFT_FORWARD, 0);
+        static constexpr Action SLOW_RIGHT_FORWARD = Action(ActionName::SLOW_RIGHT_FORWARD, ActionAngle::SLOW_RIGHT_FORWARD, ActionThrottle::SLOW_RIGHT_FORWARD, 0);
+        static constexpr Action SLOW_LEFT_BACKWARD = Action(ActionName::SLOW_LEFT_BACKWARD, ActionAngle::SLOW_LEFT_BACKWARD, ActionThrottle::SLOW_LEFT_BACKWARD, 0);
+        static constexpr Action SLOW_RIGHT_BACKWARD = Action(ActionName::SLOW_RIGHT_BACKWARD, ActionAngle::SLOW_RIGHT_BACKWARD, ActionThrottle::SLOW_RIGHT_BACKWARD, 0);
                
 };
 

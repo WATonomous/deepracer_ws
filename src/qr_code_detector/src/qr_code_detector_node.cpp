@@ -91,11 +91,13 @@ private:
             std::istringstream payload_stream(payload_str);
 
             qr_msgs::msg::QRCodeCommand msg;
-            std::string command;
-            float throttle, turn_angle;
+            std::string command = "";
+            float throttle = 0.0;
+            float turn_angle = 0.0;
 
             // Try reading in command with <<
-            if (payload_stream >> command >> throttle >> turn_angle)
+            // if (payload_stream >> command >> throttle >> turn_angle)
+            if (payload_stream >> command)
             {
                 // Collect the bounding box points
                 std::vector<cv::Point> points;
@@ -134,6 +136,7 @@ private:
                 msg.area_ratio = qr_code_area_ratio;
                 msg.center_x_ratio = dx;
                 msg.center_y_ratio = dy;
+                msg.timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
                 command_publisher_->publish(msg);
                 // RCLCPP_INFO(this->get_logger(), "QR Code detected with points: (%d, %d), (%d, %d), (%d, %d), (%d, %d)", points[0].x, points[0].y, points[1].x, points[1].y, points[2].x, points[2].y, points[3].x, points[3].y);
@@ -156,9 +159,9 @@ private:
             msg.area_ratio = -1.0;
             msg.center_x_ratio = 0.0;
             msg.center_y_ratio = 0.0;
-            if (num_consecutive_no_qr_code > NUM_CONSECUTIVE_NO_QR_CODE_THRESHOLD) {
-                command_publisher_->publish(msg);
-            }
+            // if (num_consecutive_no_qr_code > NUM_CONSECUTIVE_NO_QR_CODE_THRESHOLD) {
+            //     command_publisher_->publish(msg);
+            // }
         } else {
             num_consecutive_no_qr_code = 0;
         }
