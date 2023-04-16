@@ -40,6 +40,8 @@ Action Action::get_action_waypoint(std::string command, float dx_ratio, float dy
     if (area_ratio == -1.0) {
         return ActionVals::NO_ACTION;
     }
+
+    Action action = ActionVals::STRAIGHT_FORWARD;
         
     if (command == "stop") {
         return ActionVals::NO_ACTION;

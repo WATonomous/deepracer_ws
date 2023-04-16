@@ -11,8 +11,14 @@ public:
 
     std::string drive_topic = "/cmdvel_to_servo_pkg/servo_msg";
     std::string qr_code_topic = "/qr_code_detector/qr_code_command";
+
+    std::map<std::string, int> action_time = {
+        {"forward", 2000},
+        {"left", 1800}
+    };
+
     // 3 seconds to milliseconds
-    int action_duration = std::chrono::milliseconds(2000).count();
+    int action_duration = std::chrono::milliseconds(3000).count();
 
     QRCodeCtrlNode() : Node("qr_code_ctrl_node")
     {   
@@ -34,7 +40,7 @@ public:
 private:
     void qr_code_command_callback(const qr_msgs::msg::QRCodeCommand::SharedPtr msg)
     {
-        // RCLCPP_INFO(this->get_logger(), "Received QRCodeCommand: throttle=%f, turn_angle=%f, area_ratio=%f", msg->throttle, msg->turn_angle, msg->area_ratio);
+        RCLCPP_INFO(this->get_logger(), "Received QRCodeCommand: throttle=%f, turn_angle=%f, area_ratio=%f", msg->throttle, msg->turn_angle, msg->area_ratio);
         deepracer_interfaces_pkg::msg::ServoCtrlMsg servo_ctrl_msg;
 
         // Map QRCodeCommand values to ServoCtrlMsg
@@ -51,6 +57,7 @@ private:
             action = Action::get_action_waypoint(msg->command, msg->center_x_ratio, msg->center_y_ratio, msg->area_ratio);
             // set the action timestamp
             action.timestamp = msg->timestamp;
+            action.duration = action_time[msg->command];
         }
         
         // Add action to queue if it is different from the current action
@@ -58,8 +65,6 @@ private:
             action_queue_.push_back(action);
         }
 
-        // // Publish ServoCtrlMsg
-        // servo_ctrl_publisher_->publish(servo_ctrl_msg);
     }
 
     void publish_actions()
@@ -69,21 +74,14 @@ private:
             auto action = action_queue_.front();
             int now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
             int age = now - action.timestamp;
-            RCLCPP_INFO(this->get_logger(), "Age: %d, now %d, timestamp %d, duration %d", age, now, action.timestamp, action_duration);
 
             // Remove action if too old
-            if (age >= action_duration) {
-                RCLCPP_INFO(this->get_logger(), "Removing action");
+            if (age >= action.duration) {
                 action_queue_.pop_front();
             } else {
-                RCLCPP_INFO(this->get_logger(), "Publishing action");
 
 
                 deepracer_interfaces_pkg::msg::ServoCtrlMsg servo_ctrl_msg;
-
-                if (action.name != ActionName::NO_ACTION) {
-                    RCLCPP_INFO(this->get_logger(), "Publishing Action: %s Throttle = %f, Angle = %f", Action::get_action_name(action.name).c_str(), action.throttle, action.angle);
-                }
 
                 servo_ctrl_msg.throttle = action.throttle;
                 servo_ctrl_msg.angle = action.angle;
@@ -110,6 +108,10 @@ private:
 
 int main(int argc, char *argv[])
 {
+    // add a sleep of 3 seconds before starting node
+    RCLCPP_INFO(rclcpp::get_logger("qr_code_ctrl_node"), "Sleeping for 3 seconds before starting node");
+    std::this_thread::sleep_for(std::chrono::seconds(3));
+
     rclcpp::init(argc, argv);
     rclcpp::spin(std::make_shared<QRCodeCtrlNode>());
     rclcpp::shutdown();
