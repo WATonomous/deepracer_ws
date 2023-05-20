@@ -1,0 +1,7 @@
+string command
+float32 throttle
+float32 turn_angle
+float32 area_ratio
+float32 center_x_ratio
+float32 center_y_ratio
+int32 timestamp
